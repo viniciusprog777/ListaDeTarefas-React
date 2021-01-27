@@ -1,8 +1,17 @@
 import "./App.css";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 function TodoList() {
   const [taskList, setTaskList] = useState([]);
+  const [inputTask, setInputTask] = useState({ id: "", description: "" });
+
+  window.addEventListener("beforeunload", () => {
+    localStorage.setItem("lista", JSON.stringify(taskList));
+  });
+
+  useEffect(() => {
+    setTaskList(JSON.parse(localStorage.getItem("lista")));
+  }, []);
 
   const handleInsert = (description) => {
     const newId =
@@ -16,57 +25,87 @@ function TodoList() {
     setTaskList([...taskList, task]);
   };
 
+  const handleUpdate = (task) => {
+    setInputTask(task);
+  };
+  const handleSaveEdit = () => {
+    setTaskList(
+      taskList.map((task) => (task.id === inputTask.id ? inputTask : task))
+    );
+  };
+
   const handleRemove = (id) => {
     setTaskList(taskList.filter((task) => task.id !== id));
   };
 
   return (
     <div className="container">
-      <Form insert={handleInsert} />
-      <List list={taskList} remove={handleRemove} />
+      <Form
+        insert={handleInsert}
+        newTask={inputTask}
+        setNewTask={setInputTask}
+        update={handleSaveEdit}
+      />
+      <List list={taskList} remove={handleRemove} update={handleUpdate} />
     </div>
   );
 }
 
-function Form({ insert }) {
-  const [newTask, setNewTask] = useState("");
-
+function Form({ insert, newTask, setNewTask, update }) {
   const handleNewTask = (e) => {
-    setNewTask(e.target.value);
+    setNewTask({ ...newTask, description: e.target.value });
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    insert(newTask);
+    if (newTask.id === "") {
+      insert(newTask.description);
+    } else {
+      update();
+    }
 
-    setNewTask("");
+    setNewTask({ id: "", description: "" });
   };
   return (
     <form className="form" onSubmit={handleSubmit}>
-      <input type="text" value={newTask} onChange={handleNewTask} required />
+      <input
+        type="text"
+        value={newTask.description}
+        onChange={handleNewTask}
+        required
+      />
       <button>OK</button>
     </form>
   );
 }
 
-function List({ list, remove }) {
+function List({ list, remove, update }) {
   return (
     <section>
       {list.length === 0 && "Você não tem tarefas"}
-      {list.map((item) => (
-        <Item task={item} remove={remove} />
+      {list.map((item, index) => (
+        <Item
+          key={item.id}
+          task={item}
+          index={index}
+          remove={remove}
+          update={update}
+        />
       ))}
     </section>
   );
 }
 
-function Item({ task, remove }) {
+function Item({ task, remove, update, index }) {
   return (
     <article className="item">
       <p>
-        {task.id} - {task.description}
+        {index + 1} - {task.description}
       </p>
+      <span style={{ fontSize: 25 }} onClick={() => update(task)}>
+        &#9998;
+      </span>
       <span onClick={() => remove(task.id)}>&times;</span>
     </article>
   );
